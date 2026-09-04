@@ -579,3 +579,106 @@ button {
   color: var(--muted);
   font-size: 0.9em;
 }
+
+.note.center {
+  text-align: center;
+}
+
+/* Typed input (lesson fallback + practice) */
+.typed-fallback {
+  margin-top: 14px;
+}
+
+.typed-row,
+.practice-input {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.practice-input {
+  margin-top: 14px;
+}
+
+.typed-input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-size: 1.05em;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 2px solid var(--border);
+  background: var(--surface);
+  color: inherit;
+}
+
+.typed-input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.typed-send {
+  flex: 0 0 auto;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  box-shadow: var(--shadow);
+}
+
+.mic-btn.round {
+  flex: 0 0 auto;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Suggestion chips */
+.suggestions {
+  margin-top: 16px;
+}
+
+.suggestion-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.chip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  border: 1px solid var(--primary);
+  color: var(--primary-dark);
+  text-align: left;
+}
+
+.chip strong {
+  font-size: 0.95em;
+}
+
+.chip small {
+  color: var(--muted);
+  font-size: 0.78em;
+}
+
+.nav-btn.full {
+  width: 100%;
+  justify-content: center;
+  margin-top: 16px;
+}

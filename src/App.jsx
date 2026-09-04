@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Volume2,
   Mic,
@@ -11,8 +11,9 @@ import {
   MessageCircle,
   Trophy,
   RotateCcw,
+  Send,
 } from 'lucide-react'
-import { lessons, conversation } from './lessons.js'
+import { lessons, practice, replyTo } from './lessons.js'
 import {
   speak,
   stopSpeaking,
@@ -52,6 +53,9 @@ export default function App() {
   useEffect(() => {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.getVoices()
+      window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.getVoices()
+      }
     }
     return () => stopSpeaking()
   }, [])
@@ -188,7 +192,7 @@ function HomeView({
         <MessageCircle size={28} aria-hidden="true" />
         <span>
           <strong>Live Baat-cheet Practice</strong>
-          <small>Chai ki dukaan par baat karein</small>
+          <small>Jo chahe bolein ya likhein</small>
         </span>
         <ChevronRight size={24} aria-hidden="true" />
       </button>
@@ -234,6 +238,7 @@ function LessonView({ lesson, done, onDone, onBack }) {
   const supported = speechRecognitionSupported()
   const [listening, setListening] = useState(false)
   const [result, setResult] = useState(null) // { score, heard }
+  const [typed, setTyped] = useState('')
 
   const handleListen = () => {
     const rec = getRecognition()
@@ -255,10 +260,18 @@ function LessonView({ lesson, done, onDone, onBack }) {
     rec.start()
   }
 
+  const handleTypedCheck = () => {
+    if (!typed.trim()) return
+    const score = scoreMatch(phrase.english, typed)
+    setResult({ score, heard: typed })
+    if (score >= 60) onDone(index)
+  }
+
   const goTo = (i) => {
     stopSpeaking()
     setResult(null)
     setListening(false)
+    setTyped('')
     setIndex(i)
   }
 
@@ -301,7 +314,7 @@ function LessonView({ lesson, done, onDone, onBack }) {
         <p className="english-text">{phrase.english}</p>
 
         <span className="label">Uchaaran (Hindi mein)</span>
-        <p className="pron-text">{phrase.pronunciation}</p>
+        <p className="pron-text" lang="hi">{phrase.pronunciation}</p>
 
         <div className="phrase-actions">
           <button
@@ -341,6 +354,32 @@ function LessonView({ lesson, done, onDone, onBack }) {
           )}
         </div>
 
+        {!supported && (
+          <div className="typed-fallback">
+            <label htmlFor="lesson-typed" className="note">
+              Microphone nahi hai? Yahan English likhkar practice karein:
+            </label>
+            <div className="typed-row">
+              <input
+                id="lesson-typed"
+                className="typed-input"
+                type="text"
+                value={typed}
+                placeholder={phrase.english}
+                onChange={(e) => setTyped(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.nativeEvent.isComposing && e.keyCode !== 229) {
+                    handleTypedCheck()
+                  }
+                }}
+              />
+              <button className="typed-send" onClick={handleTypedCheck} aria-label="Check">
+                <Send size={20} aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+        )}
+
         {result && (
           <div className={result.score >= 60 ? 'feedback good' : 'feedback poor'}>
             {result.score >= 60 ? (
@@ -350,7 +389,7 @@ function LessonView({ lesson, done, onDone, onBack }) {
             ) : (
               <p>Phir se koshish karein. {result.score}% sahi</p>
             )}
-            <small>Aapne bola: &ldquo;{result.heard}&rdquo;</small>
+            <small>Aapne kaha: &ldquo;{result.heard}&rdquo;</small>
           </div>
         )}
       </div>
@@ -376,50 +415,61 @@ function LessonView({ lesson, done, onDone, onBack }) {
 }
 
 function PracticeView({ onBack }) {
-  const [step, setStep] = useState(0)
   const supported = speechRecognitionSupported()
   const [listening, setListening] = useState(false)
-  const [result, setResult] = useState(null)
+  const [input, setInput] = useState('')
+  const [messages, setMessages] = useState(() => [
+    { from: 'them', english: practice.opener.english, hindi: practice.opener.hindi },
+  ])
+  const chatRef = useRef(null)
 
-  const turn = conversation.turns[step]
-  const isLast = step === conversation.turns.length - 1
-
+  // Greet with voice on first mount.
   useEffect(() => {
-    // Auto play shopkeeper lines
-    if (turn && turn.speaker === 'shopkeeper') {
-      speak(turn.english)
-    }
+    speak(practice.opener.english)
     return () => stopSpeaking()
-  }, [step])
+  }, [])
+
+  // Keep the chat scrolled to the newest message.
+  useEffect(() => {
+    if (chatRef.current) {
+      chatRef.current.scrollTop = chatRef.current.scrollHeight
+    }
+  }, [messages])
+
+  const sendText = (text) => {
+    const trimmed = (text || '').trim()
+    if (!trimmed) return
+    const reply = replyTo(trimmed)
+    setMessages((prev) => [
+      ...prev,
+      { from: 'you', english: trimmed },
+      { from: 'them', english: reply.english, hindi: reply.hindi },
+    ])
+    setInput('')
+    stopSpeaking()
+    speak(reply.english)
+  }
 
   const handleListen = () => {
     const rec = getRecognition()
     if (!rec) return
-    setResult(null)
     setListening(true)
     rec.onresult = (e) => {
       const heard = e.results[0][0].transcript
-      const best = Math.max(
-        ...Array.from(e.results[0]).map((alt) =>
-          scoreMatch(turn.english, alt.transcript)
-        )
-      )
-      setResult({ score: best, heard })
+      sendText(heard)
     }
     rec.onerror = () => setListening(false)
     rec.onend = () => setListening(false)
     rec.start()
   }
 
-  const next = () => {
-    stopSpeaking()
-    setResult(null)
-    setStep((s) => Math.min(s + 1, conversation.turns.length - 1))
-  }
   const restart = () => {
     stopSpeaking()
-    setResult(null)
-    setStep(0)
+    setInput('')
+    setMessages([
+      { from: 'them', english: practice.opener.english, hindi: practice.opener.hindi },
+    ])
+    speak(practice.opener.english)
   }
 
   return (
@@ -433,28 +483,22 @@ function PracticeView({ onBack }) {
           {'\u2615'}
         </span>
         <div>
-          <h1>{conversation.title}</h1>
-          <p>{conversation.subtitle}</p>
+          <h1>{practice.title}</h1>
+          <p>{practice.subtitle}</p>
         </div>
       </div>
 
-      <div className="chat">
-        {conversation.turns.slice(0, step + 1).map((t, i) => (
-          <div
-            key={i}
-            className={t.speaker === 'you' ? 'bubble you' : 'bubble them'}
-          >
+      <div className="chat" ref={chatRef}>
+        {messages.map((m, i) => (
+          <div key={i} className={m.from === 'you' ? 'bubble you' : 'bubble them'}>
             <span className="bubble-role">
-              {t.speaker === 'you' ? 'Aap' : 'Dukaandaar'}
+              {m.from === 'you' ? 'Aap' : 'Dukaandaar'}
             </span>
-            <p className="bubble-en">{t.english}</p>
-            <p className="bubble-hi">{t.hindi}</p>
-            {t.pronunciation && (
-              <p className="bubble-pron">{t.pronunciation}</p>
-            )}
+            <p className="bubble-en">{m.english}</p>
+            {m.hindi && <p className="bubble-hi">{m.hindi}</p>}
             <button
               className="mini-speak"
-              onClick={() => speak(t.english)}
+              onClick={() => speak(m.english)}
               aria-label="Suniye"
             >
               <Volume2 size={18} aria-hidden="true" />
@@ -463,60 +507,59 @@ function PracticeView({ onBack }) {
         ))}
       </div>
 
-      <div className="practice-controls">
-        {turn.speaker === 'you' && (
-          <div className="your-turn">
-            <p className="turn-hint">
-              Aapki baari: <strong>{turn.english}</strong>
-            </p>
-            {supported ? (
-              <button
-                className={listening ? 'mic-btn listening' : 'mic-btn'}
-                onClick={handleListen}
-                disabled={listening}
-              >
-                {listening ? (
-                  <>
-                    <MicOff size={26} aria-hidden="true" /> Sun raha hoon...
-                  </>
-                ) : (
-                  <>
-                    <Mic size={26} aria-hidden="true" /> Bolkar Jawaab
-                  </>
-                )}
-              </button>
-            ) : (
-              <p className="note">
-                Microphone practice ke liye Chrome ya Edge istemaal karein.
-              </p>
-            )}
-            {result && (
-              <div className={result.score >= 60 ? 'feedback good' : 'feedback poor'}>
-                <p>
-                  {result.score >= 60 ? (
-                    <>
-                      <Check size={20} aria-hidden="true" /> Sahi! {result.score}%
-                    </>
-                  ) : (
-                    <>Phir se: {result.score}% sahi</>
-                  )}
-                </p>
-                <small>Aapne bola: &ldquo;{result.heard}&rdquo;</small>
-              </div>
-            )}
-          </div>
-        )}
-
-        {isLast ? (
-          <button className="nav-btn primary" onClick={restart}>
-            <RotateCcw size={20} aria-hidden="true" /> Dobara shuru karein
-          </button>
-        ) : (
-          <button className="nav-btn primary" onClick={next}>
-            Aage <ChevronRight size={22} aria-hidden="true" />
-          </button>
-        )}
+      <div className="suggestions">
+        <span className="note">Ye bol kar dekhein:</span>
+        <div className="suggestion-chips">
+          {practice.suggestions.map((s, i) => (
+            <button key={i} className="chip" onClick={() => sendText(s.english)}>
+              <strong>{s.english}</strong>
+              <small>{s.hindi}</small>
+            </button>
+          ))}
+        </div>
       </div>
+
+      <div className="practice-input">
+        <input
+          className="typed-input"
+          type="text"
+          value={input}
+          placeholder="English mein likhein..."
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.nativeEvent.isComposing && e.keyCode !== 229) {
+              sendText(input)
+            }
+          }}
+        />
+        {supported && (
+          <button
+            className={listening ? 'mic-btn round listening' : 'mic-btn round'}
+            onClick={handleListen}
+            disabled={listening}
+            aria-label={listening ? 'Sun raha hoon' : 'Bolkar jawaab dein'}
+          >
+            {listening ? <MicOff size={22} aria-hidden="true" /> : <Mic size={22} aria-hidden="true" />}
+          </button>
+        )}
+        <button
+          className="typed-send"
+          onClick={() => sendText(input)}
+          aria-label="Bhejein"
+        >
+          <Send size={22} aria-hidden="true" />
+        </button>
+      </div>
+
+      {!supported && (
+        <p className="note center">
+          Bolkar practice ke liye Chrome ya Edge istemaal karein. Tab tak upar likhkar baat karein.
+        </p>
+      )}
+
+      <button className="nav-btn primary full" onClick={restart}>
+        <RotateCcw size={20} aria-hidden="true" /> Nayi baat-cheet shuru karein
+      </button>
     </section>
   )
 }

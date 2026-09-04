@@ -19,12 +19,14 @@ export default defineConfig({
       manifest: {
         name: 'BolChal English',
         short_name: 'BolChal',
-        description: 'Hindi se aasaan English bolna seekhen',
+        description: 'Learn spoken English from Hindi',
+        start_url: '/',
+        scope: '/',
+        display: 'standalone',
+        orientation: 'portrait-primary',
         theme_color: '#f97316',
         background_color: '#fffaf2',
-        display: 'standalone',
-        start_url: '/',
-        lang: 'hi',
+        lang: 'en-IN',
         icons: [
           { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' }
         ]

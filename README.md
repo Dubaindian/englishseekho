@@ -1,46 +1,40 @@
 # BolChal English
 
-A senior-friendly Hindi-to-English speaking practice Progressive Web App.
+A mobile-first Hindi-to-English learning Progressive Web App for beginners, senior users, and homemakers.
 
 ## Features
 
-- Six beginner lessons with Hindi meaning, English text, and Hindi pronunciation help
-- English text-to-speech playback
-- Browser speech recognition for speaking practice
-- Guided live-conversation practice
-- Large-text mode and simple mobile-friendly controls
-- Progress saved locally
-- Installable PWA configuration
+- Six practical beginner lessons
+- Hindi meanings and Hindi-script pronunciation help
+- Speech recognition for speaking practice
+- Open-ended, rule-based live conversation practice
+- Typed reply fallback for unsupported browsers
+- Indian English (`en-IN`) female voice preference using installed device voices
+- Large-text mode
+- Local progress tracking
+- Installable PWA setup
 
-## Requirements
+> The selected spoken voice depends on voices installed on the user's device. The app prioritizes Indian English female voice names and falls back safely.
 
-- Node.js 20 or newer
-- npm
-- Chrome or Microsoft Edge recommended for microphone practice
-
-## Run locally
+## Local setup
 
 ```bash
 npm install
 npm run dev
 ```
 
-## Production build
+## Production check
 
 ```bash
 npm run build
 npm run preview
 ```
 
-## Deploy to Vercel
+## Vercel
 
-Import the repository into Vercel. The Vite defaults are sufficient:
-
+- Framework preset: Vite
+- Install command: `npm install`
 - Build command: `npm run build`
 - Output directory: `dist`
 
-After deployment, open the HTTPS site on the phone and use the browser's **Add to Home Screen** or **Install app** option.
-
-## Microphone note
-
-Speech recognition depends on browser support and microphone permission. Production deployment should use HTTPS.
+The app requires HTTPS and microphone permission for speech recognition. Chrome or Microsoft Edge is recommended on Android.
